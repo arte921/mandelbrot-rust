@@ -1,3 +1,4 @@
+// import graphics related stuff from pixel_canvas crate
 use pixel_canvas::{Canvas, Color};
 
 // what real coordinates to include
