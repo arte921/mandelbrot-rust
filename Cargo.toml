@@ -1,0 +1,16 @@
+[package]
+name = "mandelbrot-rust"
+version = "0.1.0"
+authors = ["Ard-Jan van Etten <ardjanve@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+
+pixel-canvas = "0.2.1"
+
+[[bin]]
+name = "mandelbrot-rust"
+path = "main.rs"
+
