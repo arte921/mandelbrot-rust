@@ -1,3 +1,4 @@
+use array_init::array_init;
 use std::thread;
 // import graphics related stuff from pixel_canvas crate
 use pixel_canvas::{Canvas, Color};
@@ -34,7 +35,13 @@ fn main () {
         .render_on_change(true) // only render one time, there is no state change anyway (because not listening for mouse events)
         .title("mandelbrot");   // set the title
 
-    canvas.render(|_, image| { // don't need the mouse argument
+    let mandelbrotresult: [std::thread::JoinHandle<()>; WIDTH as usize] = array_init(|y: usize| {
+        thread::spawn(move || {
+            mandelbrotrow(y)
+        });
+    });
+
+    canvas.render(move |_, image| { // don't need the mouse argument
 
         // for every row and collumn, thuse have coordinate per pixels in x and y
         for (y, row) in image.chunks_mut(WIDTH as usize).enumerate() {
@@ -51,8 +58,8 @@ fn main () {
     });
 }
 
-fn row (y: f64) -> [u8; WIDTH as usize] {
-    (0..WIDTH).map(|x| {
+fn mandelbrotrow (y: usize) -> [u8; WIDTH as usize] {
+    array_init(|x| {
         // calculate real and imaginary coordinate on grid
         let r = x as f64 * RRES + RMIN;
         let i = y as f64 * IRES + IMIN;
@@ -69,7 +76,7 @@ fn row (y: f64) -> [u8; WIDTH as usize] {
             // resulting in a cool glow effect
             (((ITERATIONS - isinset.1) as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
         }
-    }).enumerate()
+    })
 }
 
 

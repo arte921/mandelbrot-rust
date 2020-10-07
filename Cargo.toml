@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 
 pixel-canvas = "0.2.1"
+array-init = "0.1.1"
 
 [[bin]]
 name = "mandelbrot-rust"
