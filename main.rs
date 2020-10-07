@@ -1,3 +1,4 @@
+use std::thread;
 // import graphics related stuff from pixel_canvas crate
 use pixel_canvas::{Canvas, Color};
 
@@ -15,44 +16,30 @@ const ITERATIONS: i32 = 1000;
 // the "brightness" of the area just outside the set
 const COLORFACTOR: i32 = 300;
 
+// width and height of the rendered image
+const WIDTH: i32 = 800;
+const HEIGHT: i32 = 800;
+
 // calculates how "wide" the views are on the axi
 const RWIDTH: f64 = RMAX - RMIN;
 const IWIDTH: f64 = IMAX - IMIN;
 
+const RRES: f64 = RWIDTH / WIDTH as f64;
+const IRES: f64 = IWIDTH / HEIGHT as f64;
+
 fn main () {
 
     // create the canvas to draw on
-    let canvas = Canvas::new(800, 800)  // set the size
+    let canvas = Canvas::new(WIDTH as usize, HEIGHT as usize)  // set the size 
         .render_on_change(true) // only render one time, there is no state change anyway (because not listening for mouse events)
         .title("mandelbrot");   // set the title
 
     canvas.render(|_, image| { // don't need the mouse argument
 
-        // get width and height of window
-        let width = image.width() as i32; 
-        let height = image.height() as i32;
-        
         // for every row and collumn, thuse have coordinate per pixels in x and y
-        for (y, row) in image.chunks_mut(width as usize).enumerate() {
+        for (y, row) in image.chunks_mut(WIDTH as usize).enumerate() {
             for (x, pixel) in row.iter_mut().enumerate() {
-                 
-                // calculate real and imaginary coordinate on grid
-                let r = x as f64 * RWIDTH / width as f64 + RMIN;
-                let i = y as f64 * IWIDTH / height as f64 + IMIN;
-                
-                // does the actual calculation, result is in a (is in set: bool, iterations before
-                // being excluded: i32) tuple
-                let isinset = inset(r, i);
-
-                // calculate brightness
-                let grayscale = if isinset.0 {
-                    0 // black if in set
-                } else {
-                    // the more iterations it "survived" before being excluded, the brighter it is,
-                    // resulting in a cool glow effect
-                    (((ITERATIONS - isinset.1) as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
-                } as u8;
-                
+                let grayscale = 0;
                 // set the actual color from grayscale
                 *pixel = Color {
                     r: grayscale,
@@ -63,6 +50,28 @@ fn main () {
         }
     });
 }
+
+fn row (y: f64) -> [u8; WIDTH as usize] {
+    (0..WIDTH).map(|x| {
+        // calculate real and imaginary coordinate on grid
+        let r = x as f64 * RRES + RMIN;
+        let i = y as f64 * IRES + IMIN;
+        
+        // does the actual calculation, result is in a (is in set: bool, iterations before
+        // being excluded: i32) tuple
+        let isinset = inset(r, i);
+
+        // calculate brightness
+        if isinset.0 {
+            0 // black if in set
+        } else {
+            // the more iterations it "survived" before being excluded, the brighter it is,
+            // resulting in a cool glow effect
+            (((ITERATIONS - isinset.1) as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
+        }
+    }).enumerate()
+}
+
 
 // checks if a given complex number is in the set
 fn inset (r: f64, i: f64) -> (bool, i32) {
