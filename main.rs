@@ -19,11 +19,11 @@ const ITERATIONS: u32 = 1000;
 const COLORFACTOR: u32 = 300;
 
 // width and height of the rendered image
-const WIDTH: u32 = 1024;
-const HEIGHT: u32 = 1024;
+const WIDTH: u32 = 512;
+const HEIGHT: u32 = 512;
 
 // amount of threads to use
-const THREADS: u32 = 64;
+const THREADS: u32 = 8;
 
 // amount of lines one thread will compute
 const THREADLINES: u32 = HEIGHT as u32 / THREADS;
@@ -43,17 +43,17 @@ fn main () {
 
     canvas.render(|_, image| { // don't need the mouse argument
 
-        let mut mandelbrotthreads: Vec<std::thread::JoinHandle<[[u32; WIDTH as usize]; THREADLINES as usize]>> = Vec::new();
+        let mut mandelbrotthreads: Vec<std::thread::JoinHandle<Vec<[u8; WIDTH as usize]>>> = Vec::new();
         for i in 0..THREADS {
             mandelbrotthreads.push(thread::spawn(move || {
                 mandelbrotrow(i as u32)
             }));
         }
 
-        let mut results = [[[0; WIDTH as usize]; THREADLINES as usize]; THREADS as usize];
+        let mut results: Vec<Vec<[u8; WIDTH as usize]>> = Vec::new();
 
-        for (i, thread) in mandelbrotthreads.into_iter().enumerate() {
-            results[i as usize] = thread.join().unwrap();
+        for (_, thread) in mandelbrotthreads.into_iter().enumerate() {
+            results.push(thread.join().unwrap());
         }
 
         // for every row and collumn, thuse have coordinate per pixels in x and y
@@ -63,37 +63,40 @@ fn main () {
                 let grayscale = resultrow[x as usize];
                 // set the actual color from grayscale
                 *pixel = Color {
-                    r: grayscale as u8,
-                    g: grayscale as u8,
-                    b: grayscale as u8
+                    r: grayscale,
+                    g: grayscale,
+                    b: grayscale
                 };
             }
         }
     });
 }
 
-fn mandelbrotrow (n: u32) -> [[u32; WIDTH as usize]; THREADLINES as usize] {
-    let mut result: [[u32; WIDTH as usize]; THREADLINES as usize] = [[0; WIDTH as usize]; THREADLINES as usize];
+fn mandelbrotrow (n: u32) -> Vec<[u8; WIDTH as usize]> {
+    let mut result: Vec<[u8; WIDTH as usize]> = Vec::new();
+
     for x in 0..WIDTH {
+        let mut line: [u8; WIDTH as usize] = [0; WIDTH as usize];
         for y in 0..THREADLINES {
 
             // calculate real and imaginary coordinate on grid
             let r = x as f64 * RRES + RMIN;
-            let i = (y * THREADS + n as u32) as f64 * IRES + IMIN;
+            let i = (y * THREADS + n) as f64 * IRES + IMIN;
             
             // does the actual calculation, result is in a (is in set: bool, iterations before
             // being excluded: u32) tuple
             let isinset = inset(r, i);
 
             // calculate brightness
-            result[y as usize][x as usize] = if isinset.0 {
+            line[y as usize] = if isinset.0 {
                 0 // black if in set
             } else {
                 // the more iterations it "survived" before being excluded, the brighter it is,
                 // resulting in a cool glow effect
-                ((isinset.1 as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u32
+                ((isinset.1 as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
             }
         }
+        result.push(line);
     }
     result
 }
@@ -106,13 +109,13 @@ fn inset (r: f64, i: f64) -> (bool, u32) {
 
 // one iteration of the mandelbrot set. (p, q): complex number z, (a, b): complex number c
 fn mandelbrot (p: f64, q: f64, a: f64, b: f64, n: u32) -> (bool, u32) {
-    // iterative solution runs faster than recursive... so sadly its time for mutables
+    // iterative solution runs faster than recursive... so sadly it's time for mutables
 
     let mut p = p;
     let mut q = q;
 
     for i in 0..n {
-        
+
         if infinite(p, q) { 
             return (false, i);
         }
