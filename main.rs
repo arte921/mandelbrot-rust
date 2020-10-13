@@ -19,11 +19,11 @@ const ITERATIONS: u32 = 1000;
 const COLORFACTOR: u32 = 300;
 
 // width and height of the rendered image
-const WIDTH: u32 = 128;
-const HEIGHT: u32 = 128;
+const WIDTH: u32 = 1024;
+const HEIGHT: u32 = 1024;
 
 // amount of threads to use
-const THREADS: u32 = 8;
+const THREADS: u32 = 64;
 
 // amount of lines one thread will compute
 const THREADLINES: u32 = HEIGHT as u32 / THREADS;
@@ -63,9 +63,9 @@ fn main () {
                 let grayscale = resultrow[x as usize];
                 // set the actual color from grayscale
                 *pixel = Color {
-                    r: grayscale,
-                    g: grayscale,
-                    b: grayscale
+                    r: grayscale as u8,
+                    g: grayscale as u8,
+                    b: grayscale as u8
                 };
             }
         }
@@ -91,7 +91,7 @@ fn mandelbrotrow (n: u32) -> [[u32; WIDTH as usize]; THREADLINES as usize] {
             } else {
                 // the more iterations it "survived" before being excluded, the brighter it is,
                 // resulting in a cool glow effect
-                (((ITERATIONS - isinset.1) as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u32
+                ((isinset.1 as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u32
             }
         }
     }
@@ -105,8 +105,27 @@ fn inset (r: f64, i: f64) -> (bool, u32) {
 }
 
 // one iteration of the mandelbrot set. (p, q): complex number z, (a, b): complex number c
-fn mandelbrot (p: f64, q: f64, a: f64, b: f64, i: u32) -> (bool, u32) {
-    
+fn mandelbrot (p: f64, q: f64, a: f64, b: f64, n: u32) -> (bool, u32) {
+    // iterative solution runs faster than recursive... so sadly its time for mutables
+
+    let mut p = p;
+    let mut q = q;
+
+    for i in 0..n {
+        
+        if infinite(p, q) { 
+            return (false, i);
+        }
+
+        let t = p;
+
+        p = a + p.powf(2.0) - q.powf(2.0);
+        q = 2.0 * t * q + b;
+
+    }
+
+    (true, 0)
+/*  
     // has reached the max amount of iterations
     if i == 0 { 
         return (true, 0);
@@ -118,7 +137,7 @@ fn mandelbrot (p: f64, q: f64, a: f64, b: f64, i: u32) -> (bool, u32) {
     }
 
     // try another iteration
-    mandelbrot(a + p.powf(2.0) - q.powf(2.0), 2.0 * p * q + b, a, b, i - 1)
+    mandelbrot(a + p.powf(2.0) - q.powf(2.0), 2.0 * p * q + b, a, b, i - 1)*/
 }
 
 // if absolute value < 2 it wanders off to infinity
