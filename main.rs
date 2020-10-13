@@ -1,6 +1,7 @@
-use array_init::array_init;
+// to allow for multithreading
 use std::thread;
-// import graphics related stuff from pixel_canvas crate
+
+// pixel_canvas for graphics
 use pixel_canvas::{Canvas, Color};
 
 // what real coordinates to include
@@ -12,14 +13,20 @@ const IMIN: f64 = -1.3;
 const IMAX: f64 = 1.3;
 
 // how many iterations before including a number in the set
-const ITERATIONS: i32 = 1000;
+const ITERATIONS: u32 = 1000;
 
 // the "brightness" of the area just outside the set
-const COLORFACTOR: i32 = 300;
+const COLORFACTOR: u32 = 300;
 
 // width and height of the rendered image
-const WIDTH: i32 = 800;
-const HEIGHT: i32 = 800;
+const WIDTH: u32 = 128;
+const HEIGHT: u32 = 128;
+
+// amount of threads to use
+const THREADS: u32 = 8;
+
+// amount of lines one thread will compute
+const THREADLINES: u32 = HEIGHT as u32 / THREADS;
 
 // calculates how "wide" the views are on the axi
 const RWIDTH: f64 = RMAX - RMIN;
@@ -29,24 +36,31 @@ const RRES: f64 = RWIDTH / WIDTH as f64;
 const IRES: f64 = IWIDTH / HEIGHT as f64;
 
 fn main () {
-
     // create the canvas to draw on
     let canvas = Canvas::new(WIDTH as usize, HEIGHT as usize)  // set the size 
         .render_on_change(true) // only render one time, there is no state change anyway (because not listening for mouse events)
         .title("mandelbrot");   // set the title
 
-    let mandelbrotresult: [std::thread::JoinHandle<()>; WIDTH as usize] = array_init(|y: usize| {
-        thread::spawn(move || {
-            mandelbrotrow(y)
-        });
-    });
+    canvas.render(|_, image| { // don't need the mouse argument
 
-    canvas.render(move |_, image| { // don't need the mouse argument
+        let mut mandelbrotthreads: Vec<std::thread::JoinHandle<[[u32; WIDTH as usize]; THREADLINES as usize]>> = Vec::new();
+        for i in 0..THREADS {
+            mandelbrotthreads.push(thread::spawn(move || {
+                mandelbrotrow(i as u32)
+            }));
+        }
+
+        let mut results = [[[0; WIDTH as usize]; THREADLINES as usize]; THREADS as usize];
+
+        for (i, thread) in mandelbrotthreads.into_iter().enumerate() {
+            results[i as usize] = thread.join().unwrap();
+        }
 
         // for every row and collumn, thuse have coordinate per pixels in x and y
         for (y, row) in image.chunks_mut(WIDTH as usize).enumerate() {
+            let resultrow = results[y % THREADS as usize][y / THREADS as usize];
             for (x, pixel) in row.iter_mut().enumerate() {
-                let grayscale = 0;
+                let grayscale = resultrow[x as usize];
                 // set the actual color from grayscale
                 *pixel = Color {
                     r: grayscale,
@@ -58,35 +72,40 @@ fn main () {
     });
 }
 
-fn mandelbrotrow (y: usize) -> [u8; WIDTH as usize] {
-    array_init(|x| {
-        // calculate real and imaginary coordinate on grid
-        let r = x as f64 * RRES + RMIN;
-        let i = y as f64 * IRES + IMIN;
-        
-        // does the actual calculation, result is in a (is in set: bool, iterations before
-        // being excluded: i32) tuple
-        let isinset = inset(r, i);
+fn mandelbrotrow (n: u32) -> [[u32; WIDTH as usize]; THREADLINES as usize] {
+    let mut result: [[u32; WIDTH as usize]; THREADLINES as usize] = [[0; WIDTH as usize]; THREADLINES as usize];
+    for x in 0..WIDTH {
+        for y in 0..THREADLINES {
 
-        // calculate brightness
-        if isinset.0 {
-            0 // black if in set
-        } else {
-            // the more iterations it "survived" before being excluded, the brighter it is,
-            // resulting in a cool glow effect
-            (((ITERATIONS - isinset.1) as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
+            // calculate real and imaginary coordinate on grid
+            let r = x as f64 * RRES + RMIN;
+            let i = (y * THREADS + n as u32) as f64 * IRES + IMIN;
+            
+            // does the actual calculation, result is in a (is in set: bool, iterations before
+            // being excluded: u32) tuple
+            let isinset = inset(r, i);
+
+            // calculate brightness
+            result[y as usize][x as usize] = if isinset.0 {
+                0 // black if in set
+            } else {
+                // the more iterations it "survived" before being excluded, the brighter it is,
+                // resulting in a cool glow effect
+                (((ITERATIONS - isinset.1) as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u32
+            }
         }
-    })
+    }
+    result
 }
 
 
 // checks if a given complex number is in the set
-fn inset (r: f64, i: f64) -> (bool, i32) {
+fn inset (r: f64, i: f64) -> (bool, u32) {
     mandelbrot(0.0, 0.0, r, i, ITERATIONS)
 }
 
 // one iteration of the mandelbrot set. (p, q): complex number z, (a, b): complex number c
-fn mandelbrot (p: f64, q: f64, a: f64, b: f64, i: i32) -> (bool, i32) {
+fn mandelbrot (p: f64, q: f64, a: f64, b: f64, i: u32) -> (bool, u32) {
     
     // has reached the max amount of iterations
     if i == 0 { 
