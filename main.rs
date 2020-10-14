@@ -5,22 +5,15 @@ use std::thread;
 use pixel_canvas::{Canvas, Color};
 
 // width and height of the rendered image
-const WIDTH: u32 = 1920;
-const HEIGHT: u32 = 1080;
+const WIDTH: u32 = 1000;
+const HEIGHT: u32 = 1000;
 
 // what part of the set to render
 const RMIN: f64 = -1.8;
 const RMAX: f64 = -1.2;
+// const RMIN: f64 = -1.8;
+// const RMAX: f64 = 1.0;
 const ICENTER: f64 = 0.0;
-
-// calculates how "wide" the views are on the axi
-const RWIDTH: f64 = RMAX - RMIN;
-const IWIDTH: f64 = RWIDTH * HEIGHT as f64 / WIDTH as f64;
-
-const HALFIWIDTH: f64 = IWIDTH / 2.0;
-
-// what imaginary coordinates to include
-const IMIN: f64 = ICENTER - HALFIWIDTH;
 
 // how many iterations before including a number in the set
 const ITERATIONS: u32 = 1000;
@@ -30,6 +23,13 @@ const COLORFACTOR: u32 = 300;
 
 // amount of threads to use
 const THREADS: u32 = 8;
+
+// calculates how "wide" the views are on the axi
+const RWIDTH: f64 = RMAX - RMIN;
+const IWIDTH: f64 = RWIDTH * HEIGHT as f64 / WIDTH as f64;
+
+// what imaginary coordinates to include
+const IMIN: f64 = ICENTER - IWIDTH / 2.0;
 
 // amount of lines one thread will compute
 const THREADLINES: u32 = HEIGHT / THREADS;
@@ -60,6 +60,10 @@ fn main () {
 
         // for every row and collumn
         for (y, row) in image.chunks_mut(WIDTH as usize).enumerate() {
+            if y as u32 / THREADS >= THREADLINES {
+                continue;
+            }
+
             let resultrow = results[y % THREADS as usize][y / THREADS as usize];
             for (x, pixel) in row.iter_mut().enumerate() {
                 let grayscale = resultrow[x as usize];
@@ -97,7 +101,6 @@ fn mandelbrotrow (n: u32) -> Vec<[u8; WIDTH as usize]> {
             } else {
                 // the more iterations it "survived" before being excluded, the brighter it is,
                 // resulting in a cool glow effect
-
                 ((isinset.1 as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
             }
         }
