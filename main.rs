@@ -4,13 +4,23 @@ use std::thread;
 // pixel_canvas for graphics
 use pixel_canvas::{Canvas, Color};
 
-// what real coordinates to include
-const RMIN: f64 = -1.7;
-const RMAX: f64 = 0.7;
+// width and height of the rendered image
+const WIDTH: u32 = 1920;
+const HEIGHT: u32 = 1080;
+
+// what part of the set to render
+const RMIN: f64 = -1.8;
+const RMAX: f64 = -1.2;
+const ICENTER: f64 = 0.0;
+
+// calculates how "wide" the views are on the axi
+const RWIDTH: f64 = RMAX - RMIN;
+const IWIDTH: f64 = RWIDTH * HEIGHT as f64 / WIDTH as f64;
+
+const HALFIWIDTH: f64 = IWIDTH / 2.0;
 
 // what imaginary coordinates to include
-const IMIN: f64 = -1.3;
-const IMAX: f64 = 1.3;
+const IMIN: f64 = ICENTER - HALFIWIDTH;
 
 // how many iterations before including a number in the set
 const ITERATIONS: u32 = 1000;
@@ -18,19 +28,11 @@ const ITERATIONS: u32 = 1000;
 // the "brightness" of the area just outside the set
 const COLORFACTOR: u32 = 300;
 
-// width and height of the rendered image
-const WIDTH: u32 = 1024;
-const HEIGHT: u32 = 1024;
-
 // amount of threads to use
 const THREADS: u32 = 8;
 
 // amount of lines one thread will compute
 const THREADLINES: u32 = HEIGHT / THREADS;
-
-// calculates how "wide" the views are on the axi
-const RWIDTH: f64 = RMAX - RMIN;
-const IWIDTH: f64 = IMAX - IMIN;
 
 const RRES: f64 = RWIDTH / WIDTH as f64;
 const IRES: f64 = IWIDTH / HEIGHT as f64;
