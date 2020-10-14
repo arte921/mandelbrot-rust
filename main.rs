@@ -1,4 +1,4 @@
-// to allow for multithreading
+// allow for multithreading
 use std::thread;
 
 // pixel_canvas for graphics

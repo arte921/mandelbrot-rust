@@ -12,3 +12,5 @@ Enter the folder it's cloned to
 
 Compile and run the code. Cargo will automatically install the needed libraries.  
 `cargo run`
+
+You can tweak parameters like resolution, amount of iterations or what part of the set you want to see in `main.rs`.
