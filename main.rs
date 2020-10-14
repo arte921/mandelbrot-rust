@@ -19,14 +19,14 @@ const ITERATIONS: u32 = 1000;
 const COLORFACTOR: u32 = 300;
 
 // width and height of the rendered image
-const WIDTH: u32 = 512;
-const HEIGHT: u32 = 512;
+const WIDTH: u32 = 1024;
+const HEIGHT: u32 = 1024;
 
 // amount of threads to use
 const THREADS: u32 = 8;
 
 // amount of lines one thread will compute
-const THREADLINES: u32 = HEIGHT as u32 / THREADS;
+const THREADLINES: u32 = HEIGHT / THREADS;
 
 // calculates how "wide" the views are on the axi
 const RWIDTH: f64 = RMAX - RMIN;
@@ -46,7 +46,7 @@ fn main () {
         let mut mandelbrotthreads: Vec<std::thread::JoinHandle<Vec<[u8; WIDTH as usize]>>> = Vec::new();
         for i in 0..THREADS {
             mandelbrotthreads.push(thread::spawn(move || {
-                mandelbrotrow(i as u32)
+                mandelbrotrow(i)
             }));
         }
 
@@ -56,11 +56,12 @@ fn main () {
             results.push(thread.join().unwrap());
         }
 
-        // for every row and collumn, thuse have coordinate per pixels in x and y
+        // for every row and collumn
         for (y, row) in image.chunks_mut(WIDTH as usize).enumerate() {
             let resultrow = results[y % THREADS as usize][y / THREADS as usize];
             for (x, pixel) in row.iter_mut().enumerate() {
                 let grayscale = resultrow[x as usize];
+                
                 // set the actual color from grayscale
                 *pixel = Color {
                     r: grayscale,
@@ -75,10 +76,10 @@ fn main () {
 fn mandelbrotrow (n: u32) -> Vec<[u8; WIDTH as usize]> {
     let mut result: Vec<[u8; WIDTH as usize]> = Vec::new();
 
-    for x in 0..WIDTH {
+    for y in 0..THREADLINES {
         let mut line: [u8; WIDTH as usize] = [0; WIDTH as usize];
-        for y in 0..THREADLINES {
 
+        for x in 0..WIDTH {
             // calculate real and imaginary coordinate on grid
             let r = x as f64 * RRES + RMIN;
             let i = (y * THREADS + n) as f64 * IRES + IMIN;
@@ -87,12 +88,14 @@ fn mandelbrotrow (n: u32) -> Vec<[u8; WIDTH as usize]> {
             // being excluded: u32) tuple
             let isinset = inset(r, i);
 
+
             // calculate brightness
-            line[y as usize] = if isinset.0 {
+            line[x as usize] = if isinset.0 {
                 0 // black if in set
             } else {
                 // the more iterations it "survived" before being excluded, the brighter it is,
                 // resulting in a cool glow effect
+
                 ((isinset.1 as f64 / COLORFACTOR as f64).sqrt() * 255.0) as u8
             }
         }
@@ -109,7 +112,7 @@ fn inset (r: f64, i: f64) -> (bool, u32) {
 
 // one iteration of the mandelbrot set. (p, q): complex number z, (a, b): complex number c
 fn mandelbrot (p: f64, q: f64, a: f64, b: f64, n: u32) -> (bool, u32) {
-    // iterative solution runs faster than recursive... so sadly it's time for mutables
+    // iterative solution runs faster than recursive, but less elegant
 
     let mut p = p;
     let mut q = q;
