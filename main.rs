@@ -11,8 +11,6 @@ const HEIGHT: u32 = 1000;
 // what part of the set to render
 const RMIN: f64 = -1.8;
 const RMAX: f64 = -1.2;
-// const RMIN: f64 = -1.8;
-// const RMAX: f64 = 1.0;
 const ICENTER: f64 = 0.0;
 
 // how many iterations before including a number in the set
@@ -58,14 +56,22 @@ fn main () {
             results.push(thread.join().unwrap());
         }
 
-        // for every row and collumn
+        // for every row
         for (y, row) in image.chunks_mut(WIDTH as usize).enumerate() {
+
+            // prevent index out of bounds when you can't divide width by threads nicely
             if y as u32 / THREADS >= THREADLINES {
                 continue;
             }
 
+            // get the current row from results
+            //                     thread number         line number in thread
             let resultrow = results[y % THREADS as usize][y / THREADS as usize];
+            
+            // for every pixel
             for (x, pixel) in row.iter_mut().enumerate() {
+
+                // get result from row
                 let grayscale = resultrow[x as usize];
                 
                 // set the actual color from grayscale
@@ -82,13 +88,16 @@ fn main () {
 fn mandelbrotrow (n: u32) -> Vec<[u8; WIDTH as usize]> {
     let mut result: Vec<[u8; WIDTH as usize]> = Vec::new();
 
+    // for every line this thread has to calculates
     for y in 0..THREADLINES {
         let mut line: [u8; WIDTH as usize] = [0; WIDTH as usize];
 
+        // get this line's imaginary coordinate
+        let i = (y * THREADS + n) as f64 * IRES + IMIN;
+
         for x in 0..WIDTH {
-            // calculate real and imaginary coordinate on grid
+            // calculate real coordinate. uselessly happens every single line.
             let r = x as f64 * RRES + RMIN;
-            let i = (y * THREADS + n) as f64 * IRES + IMIN;
             
             // does the actual calculation, result is in a (is in set: bool, iterations before
             // being excluded: u32) tuple
@@ -117,7 +126,7 @@ fn inset (r: f64, i: f64) -> (bool, u32) {
 
 // one iteration of the mandelbrot set. (p, q): complex number z, (a, b): complex number c
 fn mandelbrot (p: f64, q: f64, a: f64, b: f64, n: u32) -> (bool, u32) {
-    // iterative solution runs faster than recursive, but less elegant
+    // iterative solution is less elegant than than recursive, but runs faster 
 
     let mut p = p;
     let mut q = q;
@@ -154,6 +163,6 @@ fn mandelbrot (p: f64, q: f64, a: f64, b: f64, n: u32) -> (bool, u32) {
 // if absolute value < 2 it wanders off to infinity
 fn infinite (r: f64, i: f64) -> bool {
 
-   // not squaring for performance reasons, it's not needed anyway
+   // not squaring for performance reasons
    r.powf(2.0) + i.powf(2.0) > 4.0
 }
