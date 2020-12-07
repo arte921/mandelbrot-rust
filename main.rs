@@ -5,12 +5,12 @@ use std::thread;
 use pixel_canvas::{Canvas, Color};
 
 // width and height of the rendered image
-const WIDTH: u32 = 1000;
-const HEIGHT: u32 = 1000;
+const WIDTH: u32 = 400;
+const HEIGHT: u32 = 400;
 
 // what part of the set to render
 const RMIN: f64 = -1.8;
-const RMAX: f64 = -1.2;
+const RMAX: f64 = 0.8;
 const ICENTER: f64 = 0.0;
 
 // how many iterations before including a number in the set
