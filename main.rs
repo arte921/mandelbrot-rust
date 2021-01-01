@@ -16,7 +16,7 @@ const ICENTER: f64 = 0.0;
 // how many iterations before including a number in the set
 const ITERATIONS: u32 = 1000;
 
-// the "brightness" of the area just outside the set
+// the "darkness" of the area just outside the set
 const COLORFACTOR: u32 = 300;
 
 // amount of threads to use
@@ -125,44 +125,19 @@ fn inset (r: f64, i: f64) -> (bool, u32) {
 }
 
 // one iteration of the mandelbrot set. (p, q): complex number z, (a, b): complex number c
-fn mandelbrot (p: f64, q: f64, a: f64, b: f64, n: u32) -> (bool, u32) {
-    // iterative solution is less elegant than than recursive, but runs faster 
-
-    let mut p = p;
-    let mut q = q;
-
-    for i in 0..n {
-
-        if infinite(p, q) { 
-            return (false, i);
-        }
-
-        let t = p;
-
-        p = a + p.powf(2.0) - q.powf(2.0);
-        q = 2.0 * t * q + b;
-
+fn mandelbrot (p: f64, q: f64, a: f64, b: f64, i: u32) -> (bool, u32) {
+    if i == 0 { // reached the max amount of iterations
+        (true, 0)
+    } else if infinite(p, q) { // is infinite
+        (false, ITERATIONS - i)
+    } else {    // go for another iteration
+        mandelbrot(a + p.powf(2.0) - q.powf(2.0), 2.0 * p * q + b, a, b, i - 1)
     }
-
-    (true, 0)
-/*  
-    // has reached the max amount of iterations
-    if i == 0 { 
-        return (true, 0);
-    }
-    
-    // not in set
-    if infinite(p, q) { 
-        return (false, i);
-    }
-
-    // try another iteration
-    mandelbrot(a + p.powf(2.0) - q.powf(2.0), 2.0 * p * q + b, a, b, i - 1)*/
 }
 
 // if absolute value < 2 it wanders off to infinity
 fn infinite (r: f64, i: f64) -> bool {
 
-   // not squaring for performance reasons
+   // 2 squared = 4
    r.powf(2.0) + i.powf(2.0) > 4.0
 }
